@@ -441,7 +441,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
   if (mode === 'connect_relative') title = t.connectRelative;
   if (mode === 'edit') title = t.editNode;
 
-  const isSaveDisabled = !name.trim() && !nameUrdu.trim();
+  const isSaveDisabled = mode !== 'connect_relative' && !name.trim() && !nameUrdu.trim();
 
   return (
     <div className={`absolute top-0 ${isUrdu ? 'left-0' : 'right-0'} w-full sm:w-80 h-full bg-[#1e293b] border-${isUrdu ? 'r' : 'l'} border-gray-700 shadow-2xl p-4 sm:p-6 z-50 flex flex-col ${isUrdu ? 'dir-rtl font-urdu' : ''}`}>
