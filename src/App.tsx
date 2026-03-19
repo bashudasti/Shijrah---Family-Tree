@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,12 +8,15 @@ import ReactFlow, {
   useEdgesState,
   Handle,
   Position,
-  ReactFlowProvider
+  ReactFlowProvider,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import { v4 as uuidv4 } from 'uuid';
-import { Settings, Plus, Trash2, Heart, Pencil, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
+import { Settings, Plus, Trash2, Heart, Pencil, ChevronDown, ChevronRight, Undo2, Download } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { GoogleGenAI } from "@google/genai";
 
 // --- Types ---
@@ -61,6 +64,8 @@ const translations = {
     howIsRelated: 'How is {target} related to {source}?',
     selectSpouse: 'Select Spouse',
     unknownSpouse: 'Unknown / New Spouse',
+    downloadPdf: 'Download PDF',
+    exporting: 'Exporting...',
   },
   ur: {
     appTitle: 'شجرہ - خاندانی درخت',
@@ -87,6 +92,8 @@ const translations = {
     howIsRelated: '{target} کا {source} سے کیا رشتہ ہے؟',
     selectSpouse: 'شریک حیات منتخب کریں',
     unknownSpouse: 'نامعلوم / نیا شریک حیات',
+    downloadPdf: 'پی ڈی ایف ڈاؤن لوڈ کریں',
+    exporting: 'برآمد ہو رہا ہے...',
   }
 };
 
@@ -412,6 +419,8 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
   if (mode === 'connect_relative') title = t.connectRelative;
   if (mode === 'edit') title = t.editNode;
 
+  const isSaveDisabled = !name.trim() && !nameUrdu.trim();
+
   return (
     <div className={`absolute top-0 ${isUrdu ? 'left-0' : 'right-0'} w-80 h-full bg-[#1e293b] border-${isUrdu ? 'r' : 'l'} border-gray-700 shadow-2xl p-6 z-50 flex flex-col ${isUrdu ? 'dir-rtl font-urdu' : ''}`}>
       <h2 className="text-xl font-bold text-white mb-6">{title}</h2>
@@ -524,7 +533,8 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
       <div className="flex flex-col gap-3 mt-8">
         <button 
           onClick={() => onSave({ name, nameUrdu, gender, relationship, selectedFamilyId })}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors"
+          disabled={isSaveDisabled}
+          className={`w-full font-medium py-2 rounded-lg transition-colors ${isSaveDisabled ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
         >
           {t.save}
         </button>
@@ -551,7 +561,9 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
 function FamilyTreeApp() {
   const [persons, setPersons] = useState<Record<string, Person>>({});
   const [families, setFamilies] = useState<Record<string, Family>>({});
-  const [lang, setLang] = useState<'en' | 'ur'>('en');
+  const [lang, setLang] = useState<'en' | 'ur'>('ur');
+  const [isExporting, setIsExporting] = useState(false);
+  const { fitView } = useReactFlow();
   const [history, setHistory] = useState<{ persons: Record<string, Person>, families: Record<string, Family> }[]>([]);
   
   const [sidebarState, setSidebarState] = useState<{
@@ -578,6 +590,39 @@ function FamilyTreeApp() {
     setHistory(prev => prev.slice(0, -1));
   }, [history]);
 
+  const downloadPdf = async () => {
+    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+    if (!viewport) return;
+
+    setIsExporting(true);
+    try {
+      // Fit view to ensure everything is captured
+      await fitView({ padding: 0.2 });
+      
+      // Wait a bit for fitView to complete and rendering to settle
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const dataUrl = await toPng(viewport, {
+        backgroundColor: '#0f172a',
+        quality: 1,
+        pixelRatio: 2, // Higher quality
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [viewport.offsetWidth * 2, viewport.offsetHeight * 2]
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, viewport.offsetWidth * 2, viewport.offsetHeight * 2);
+      pdf.save(`family-tree-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const translateNameToUrdu = async (name: string): Promise<string> => {
     if (!name || name.trim() === '') return '';
     try {
@@ -585,6 +630,21 @@ function FamilyTreeApp() {
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Translate the following person name to Urdu script. Only provide the Urdu script, nothing else: "${name}"`,
+      });
+      return response.text.trim();
+    } catch (e) {
+      console.error("Translation error", e);
+      return '';
+    }
+  };
+
+  const translateUrduToEnglish = async (urduName: string): Promise<string> => {
+    if (!urduName || urduName.trim() === '') return '';
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Translate the following Urdu person name to English script. Only provide the English script, nothing else: "${urduName}"`,
       });
       return response.text.trim();
     } catch (e) {
@@ -670,8 +730,12 @@ function FamilyTreeApp() {
     pushHistory();
 
     let nameUrdu = formData.nameUrdu || '';
-    if (!nameUrdu && formData.name) {
-      nameUrdu = await translateNameToUrdu(formData.name);
+    let name = formData.name || '';
+
+    if (!nameUrdu && name) {
+      nameUrdu = await translateNameToUrdu(name);
+    } else if (!name && nameUrdu) {
+      name = await translateUrduToEnglish(nameUrdu);
     }
 
     if (mode === 'add_relative') {
@@ -679,7 +743,7 @@ function FamilyTreeApp() {
       const newPersonId = uuidv4();
       const newPerson: Person = {
         id: newPersonId,
-        name: formData.name || 'Unknown',
+        name: name || 'Unknown',
         nameUrdu: nameUrdu,
         gender: formData.gender,
         generation: 1,
@@ -861,7 +925,7 @@ function FamilyTreeApp() {
     } else if (mode === 'edit') {
       setPersons(prev => ({
         ...prev,
-        [targetId]: { ...prev[targetId], name: formData.name, nameUrdu: nameUrdu, gender: formData.gender }
+        [targetId]: { ...prev[targetId], name: name, nameUrdu: nameUrdu, gender: formData.gender }
       }));
     }
 
@@ -1065,6 +1129,17 @@ function FamilyTreeApp() {
         
         <div className="flex items-center gap-4">
           <button 
+            onClick={downloadPdf}
+            disabled={isExporting}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-600 border border-emerald-500 text-sm font-medium transition-colors text-white hover:bg-emerald-500 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={translations[lang].downloadPdf}
+          >
+            <Download size={16} />
+            <span className={lang === 'ur' ? 'font-urdu' : ''}>
+              {isExporting ? translations[lang].exporting : translations[lang].downloadPdf}
+            </span>
+          </button>
+          <button 
             onClick={undo}
             disabled={history.length === 0}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-800 border border-gray-600 text-sm font-medium transition-colors ${history.length === 0 ? 'opacity-50 cursor-not-allowed text-gray-500' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
@@ -1097,7 +1172,7 @@ function FamilyTreeApp() {
           connectionRadius={50}
         >
           <Background color="#1e293b" gap={20} size={2} />
-          <Controls className="bg-gray-800 border-gray-700 fill-white" />
+          <Controls />
         </ReactFlow>
 
         <Sidebar 

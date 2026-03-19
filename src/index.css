@@ -10,3 +10,31 @@
     direction: rtl;
   }
 }
+
+/* React Flow Controls Dark Mode */
+.react-flow__controls {
+  background: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+}
+
+.react-flow__controls-button {
+  background: #1f2937 !important;
+  border-bottom: 1px solid #374151 !important;
+  fill: #f3f4f6 !important;
+  transition: background-color 0.2s !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #374151 !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button svg {
+  fill: #f3f4f6 !important;
+}
