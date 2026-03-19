@@ -258,6 +258,7 @@ const PersonNode = ({ data }: any) => {
   }
 
   const handleStyle = { width: 20, height: 20, background: '#94a3b8', border: '2px solid #1e293b', cursor: 'pointer', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' };
+  const manualHandleStyle = { width: 12, height: 12, background: '#94a3b8', border: '2px solid #1e293b', cursor: 'pointer', zIndex: 20, borderRadius: '50%' };
   const targetHandleStyle = { width: 36, height: 36, background: 'transparent', border: 'none', zIndex: 10, borderRadius: '50%' };
 
   const displayName = isUrdu && data.nameUrdu ? data.nameUrdu : data.name;
@@ -280,14 +281,10 @@ const PersonNode = ({ data }: any) => {
       </Handle>
       <Handle type="target" position={Position.Bottom} id="bottom-interactive-target" style={{...targetHandleStyle, bottom: -18}} />
       
-      <Handle type="source" position={Position.Left} id="left-interactive" style={{...handleStyle, left: -10}} onClick={(e) => { e.stopPropagation(); data.onAddRelative(data.id); }}>
-        <Plus size={12} className="text-[#0f172a]" />
-      </Handle>
+      <Handle type="source" position={Position.Left} id="left-interactive" style={{...manualHandleStyle, left: -6}} />
       <Handle type="target" position={Position.Left} id="left-interactive-target" style={{...targetHandleStyle, left: -18}} />
       
-      <Handle type="source" position={Position.Right} id="right-interactive" style={{...handleStyle, right: -10}} onClick={(e) => { e.stopPropagation(); data.onAddRelative(data.id); }}>
-        <Plus size={12} className="text-[#0f172a]" />
-      </Handle>
+      <Handle type="source" position={Position.Right} id="right-interactive" style={{...manualHandleStyle, right: -6}} />
       <Handle type="target" position={Position.Right} id="right-interactive-target" style={{...targetHandleStyle, right: -18}} />
 
       {isRoot && <div className="absolute -top-4 text-yellow-400 text-xl drop-shadow-md">👑</div>}
