@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import { v4 as uuidv4 } from 'uuid';
-import { Settings, Plus, Trash2, Heart, Pencil, ChevronDown, ChevronRight, Undo2, Download } from 'lucide-react';
+import { Settings, Plus, Trash2, Heart, Pencil, ChevronDown, ChevronRight, Undo2, Download, X } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { GoogleGenAI } from "@google/genai";
@@ -419,8 +419,13 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
   const isSaveDisabled = !name.trim() && !nameUrdu.trim();
 
   return (
-    <div className={`absolute top-0 ${isUrdu ? 'left-0' : 'right-0'} w-80 h-full bg-[#1e293b] border-${isUrdu ? 'r' : 'l'} border-gray-700 shadow-2xl p-6 z-50 flex flex-col ${isUrdu ? 'dir-rtl font-urdu' : ''}`}>
-      <h2 className="text-xl font-bold text-white mb-6">{title}</h2>
+    <div className={`absolute top-0 ${isUrdu ? 'left-0' : 'right-0'} w-full sm:w-80 h-full bg-[#1e293b] border-${isUrdu ? 'r' : 'l'} border-gray-700 shadow-2xl p-4 sm:p-6 z-50 flex flex-col ${isUrdu ? 'dir-rtl font-urdu' : ''}`}>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-white">{title}</h2>
+        <button onClick={onCancel} className="sm:hidden text-gray-400 hover:text-white">
+          <X size={24} />
+        </button>
+      </div>
       
       <div className="flex-1 flex flex-col gap-4">
         {(mode === 'add_relative' || mode === 'connect_relative') && (
@@ -1114,40 +1119,51 @@ function FamilyTreeApp() {
 
   return (
     <div className="w-full h-screen bg-[#0f172a] flex flex-col overflow-hidden">
-      <header className="h-16 bg-[#1e293b] border-b border-gray-800 flex items-center justify-between px-6 z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
-            <Settings size={20} className="text-white" />
+      <header className="min-h-[4rem] h-auto sm:h-16 bg-[#1e293b] border-b border-gray-800 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-2 sm:py-0 z-10 gap-2 sm:gap-0">
+        <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Settings size={20} className="text-white" />
+            </div>
+            <h1 className={`text-lg sm:text-xl font-bold text-white truncate ${lang === 'ur' ? 'font-urdu' : ''}`}>
+              {translations[lang].appTitle}
+            </h1>
           </div>
-          <h1 className={`text-xl font-bold text-white ${lang === 'ur' ? 'font-urdu' : ''}`}>
-            {translations[lang].appTitle}
-          </h1>
+          
+          <div className="sm:hidden flex items-center gap-2">
+            <button 
+              onClick={() => setLang(l => l === 'en' ? 'ur' : 'en')}
+              className="px-3 py-1 rounded-lg bg-gray-800 text-gray-300 border border-gray-600 text-xs font-medium"
+            >
+              {lang === 'en' ? 'اردو' : 'EN'}
+            </button>
+          </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
           <button 
             onClick={downloadPdf}
             disabled={isExporting}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-600 border border-emerald-500 text-sm font-medium transition-colors text-white hover:bg-emerald-500 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-emerald-600 border border-emerald-500 text-xs sm:text-sm font-medium transition-colors text-white hover:bg-emerald-500 ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={translations[lang].downloadPdf}
           >
             <Download size={16} />
-            <span className={lang === 'ur' ? 'font-urdu' : ''}>
+            <span className={`hidden xs:inline ${lang === 'ur' ? 'font-urdu' : ''}`}>
               {isExporting ? translations[lang].exporting : translations[lang].downloadPdf}
             </span>
           </button>
           <button 
             onClick={undo}
             disabled={history.length === 0}
-            className={`flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-800 border border-gray-600 text-sm font-medium transition-colors ${history.length === 0 ? 'opacity-50 cursor-not-allowed text-gray-500' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
+            className={`flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-gray-800 border border-gray-600 text-xs sm:text-sm font-medium transition-colors ${history.length === 0 ? 'opacity-50 cursor-not-allowed text-gray-500' : 'text-gray-300 hover:text-white hover:bg-gray-700'}`}
             title={translations[lang].undo}
           >
             <Undo2 size={16} />
-            <span className={lang === 'ur' ? 'font-urdu' : ''}>{translations[lang].undo}</span>
+            <span className={`hidden xs:inline ${lang === 'ur' ? 'font-urdu' : ''}`}>{translations[lang].undo}</span>
           </button>
           <button 
             onClick={() => setLang(l => l === 'en' ? 'ur' : 'en')}
-            className="px-4 py-1.5 rounded-full bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-600 text-sm font-medium transition-colors"
+            className="hidden sm:block px-4 py-1.5 rounded-full bg-gray-800 text-gray-300 hover:text-white hover:bg-gray-700 border border-gray-600 text-sm font-medium transition-colors"
           >
             {lang === 'en' ? 'اردو' : 'English'}
           </button>
