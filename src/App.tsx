@@ -432,6 +432,9 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
     setRelationship(rel);
     if (rel === 'son' || rel === 'father') setGender('male');
     if (rel === 'daughter' || rel === 'mother') setGender('female');
+    if (rel === 'spouse' && targetId) {
+      setGender(persons[targetId]?.gender === 'male' ? 'female' : 'male');
+    }
   };
 
   if (!isOpen) return null;
@@ -474,7 +477,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
                       <option value="daughter">{t.daughter}</option>
                       <option value="father">{t.father}</option>
                       <option value="mother">{t.mother}</option>
-                      {canAddSpouse && <option value="spouse">{t.spouse}</option>}
+                      <option value="spouse">{t.spouse}</option>
                     </select>
                     <span>of {persons[targetId]?.name}</span>
                   </>
@@ -491,7 +494,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
                       <option value="daughter">{t.daughter}</option>
                       <option value="father">{t.father}</option>
                       <option value="mother">{t.mother}</option>
-                      {canAddSpouse && <option value="spouse">{t.spouse}</option>}
+                      <option value="spouse">{t.spouse}</option>
                     </select>
                     <span>ہے</span>
                   </>
@@ -506,7 +509,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
                   <option value="daughter">{t.daughter}</option>
                   <option value="father">{t.father}</option>
                   <option value="mother">{t.mother}</option>
-                  {canAddSpouse && <option value="spouse">{t.spouse}</option>}
+                  <option value="spouse">{t.spouse}</option>
                 </select>
               )}
             </div>
