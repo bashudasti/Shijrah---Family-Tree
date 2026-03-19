@@ -179,10 +179,10 @@ function calculateGenerations(persons: Record<string, Person>, families: Record<
 }
 
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
-  const dagreGraph = new dagre.graphlib.Graph();
+  const dagreGraph = new dagre.graphlib.Graph({ compound: true });
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   
-  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80 });
+  dagreGraph.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 80, marginx: 20, marginy: 20 });
 
   nodes.forEach((node) => {
     if (node.type === 'union') {
@@ -196,10 +196,33 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     }
   });
 
+  // Group spouses and their union nodes into clusters to keep them together
+  nodes.forEach(node => {
+    if (node.type === 'union') {
+      const parentEdges = edges.filter(e => e.target === node.id && e.targetHandle === 'union-target');
+      if (parentEdges.length === 2) {
+        const p1 = parentEdges[0].source;
+        const p2 = parentEdges[1].source;
+        const familyId = node.id;
+        const clusterId = `cluster-${familyId}`;
+        
+        dagreGraph.setNode(clusterId, { label: '', cluster: true });
+        
+        // Only set parent if not already in a cluster (to handle multiple spouses gracefully)
+        if (!dagreGraph.parent(p1)) dagreGraph.setParent(p1, clusterId);
+        if (!dagreGraph.parent(p2)) dagreGraph.setParent(p2, clusterId);
+        dagreGraph.setParent(familyId, clusterId);
+        
+        // Add a strong edge between spouses within the cluster to ensure adjacency
+        dagreGraph.setEdge(p1, p2, { weight: 2000, minlen: 0 });
+      }
+    }
+  });
+
   edges.forEach((edge) => {
     let weight = 1;
     if (edge.targetHandle === 'union-target') {
-      weight = 100; // High weight to keep parents close to their union node
+      weight = 1000; // Very high weight to keep parents close to their union node
     }
     dagreGraph.setEdge(edge.source, edge.target, { weight, minlen: 1 });
   });
