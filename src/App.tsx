@@ -61,7 +61,8 @@ const translations = {
     father: 'Father',
     mother: 'Mother',
     spouse: 'Spouse',
-    howIsRelated: 'How is {target} related to {source}?',
+    howIsRelated: 'How is {source} related to {target}?',
+    isOf: '{source} is {rel} of {target}',
     selectSpouse: 'Select Spouse',
     unknownSpouse: 'Unknown / New Spouse',
     downloadPdf: 'Download PDF',
@@ -89,7 +90,8 @@ const translations = {
     father: 'والد',
     mother: 'والدہ',
     spouse: 'شریک حیات',
-    howIsRelated: '{target} کا {source} سے کیا رشتہ ہے؟',
+    howIsRelated: '{source} کا {target} سے کیا رشتہ ہے؟',
+    isOf: '{source} {target} کا {rel} ہے',
     selectSpouse: 'شریک حیات منتخب کریں',
     unknownSpouse: 'نامعلوم / نیا شریک حیات',
     downloadPdf: 'پی ڈی ایف ڈاؤن لوڈ کریں',
@@ -372,7 +374,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
         setName('');
         setNameUrdu('');
         setGender('male');
-        setRelationship('child');
+        setRelationship('son');
         setSelectedFamilyId('');
       } else {
         setName('');
@@ -386,8 +388,8 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
 
   const parentIdForSpouseSelection = useMemo(() => {
     if (mode === 'add_relative' && (relationship === 'son' || relationship === 'daughter')) return targetId;
-    if (mode === 'connect_relative' && relationship === 'child') return sourceId;
-    if (mode === 'connect_relative' && relationship === 'parent') return targetId;
+    if (mode === 'connect_relative' && (relationship === 'son' || relationship === 'daughter')) return targetId;
+    if (mode === 'connect_relative' && (relationship === 'father' || relationship === 'mother')) return sourceId;
     return null;
   }, [mode, relationship, targetId, sourceId]);
 
@@ -455,30 +457,59 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
               {mode === 'connect_relative' && sourceId && targetId 
-                ? t.howIsRelated.replace('{target}', persons[targetId]?.name).replace('{source}', persons[sourceId]?.name)
+                ? t.howIsRelated.replace('{source}', persons[sourceId]?.name).replace('{target}', persons[targetId]?.name)
                 : t.relationship}
             </label>
-            <select 
-              value={relationship}
-              onChange={e => handleRelationshipChange(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500"
-            >
-              {mode === 'connect_relative' ? (
-                <>
-                  <option value="child">{persons[sourceId]?.gender === 'male' ? t.son : t.daughter}</option>
-                  <option value="parent">{persons[sourceId]?.gender === 'male' ? t.father : t.mother}</option>
-                  {canAddSpouse && <option value="spouse">{t.spouse}</option>}
-                </>
+            <div className="flex flex-wrap items-center gap-2 text-gray-300 text-sm mb-2">
+              {mode === 'connect_relative' && sourceId && targetId ? (
+                lang === 'en' ? (
+                  <>
+                    <span>{persons[sourceId]?.name} is</span>
+                    <select 
+                      value={relationship}
+                      onChange={e => handleRelationshipChange(e.target.value)}
+                      className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="son">{t.son}</option>
+                      <option value="daughter">{t.daughter}</option>
+                      <option value="father">{t.father}</option>
+                      <option value="mother">{t.mother}</option>
+                      {canAddSpouse && <option value="spouse">{t.spouse}</option>}
+                    </select>
+                    <span>of {persons[targetId]?.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{persons[sourceId]?.name} {persons[targetId]?.name} کا</span>
+                    <select 
+                      value={relationship}
+                      onChange={e => handleRelationshipChange(e.target.value)}
+                      className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1 text-white focus:outline-none focus:border-emerald-500"
+                      dir="rtl"
+                    >
+                      <option value="son">{t.son}</option>
+                      <option value="daughter">{t.daughter}</option>
+                      <option value="father">{t.father}</option>
+                      <option value="mother">{t.mother}</option>
+                      {canAddSpouse && <option value="spouse">{t.spouse}</option>}
+                    </select>
+                    <span>ہے</span>
+                  </>
+                )
               ) : (
-                <>
+                <select 
+                  value={relationship}
+                  onChange={e => handleRelationshipChange(e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
+                >
                   <option value="son">{t.son}</option>
                   <option value="daughter">{t.daughter}</option>
                   <option value="father">{t.father}</option>
                   <option value="mother">{t.mother}</option>
                   {canAddSpouse && <option value="spouse">{t.spouse}</option>}
-                </>
+                </select>
               )}
-            </select>
+            </div>
           </div>
         )}
 
@@ -836,8 +867,12 @@ function FamilyTreeApp() {
       const targetPerson = persons[targetId];
       let newFamilies = { ...families };
 
-      if (rel === 'parent') {
-        // Target is parent of Source
+      // Update source person's gender if it matches a gender-specific relationship
+      if (rel === 'son' || rel === 'father') sourcePerson.gender = 'male';
+      if (rel === 'daughter' || rel === 'mother') sourcePerson.gender = 'female';
+
+      if (rel === 'son' || rel === 'daughter') {
+        // Source is child of Target (Target is parent of Source)
         const sourceFamilyAsChild = (Object.values(newFamilies) as Family[]).find(f => f.childrenIds.includes(sourceId));
         
         let targetFamilyAsParent = undefined;
@@ -872,8 +907,8 @@ function FamilyTreeApp() {
              childrenIds: [sourceId]
            };
         }
-      } else if (rel === 'child') {
-        // Target is child of Source
+      } else if (rel === 'father' || rel === 'mother') {
+        // Source is parent of Target (Target is child of Source)
         const targetFamilyAsChild = (Object.values(newFamilies) as Family[]).find(f => f.childrenIds.includes(targetId));
         
         let sourceFamilyAsParent = undefined;
