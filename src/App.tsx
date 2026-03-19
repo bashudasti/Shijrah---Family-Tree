@@ -561,7 +561,7 @@ const Sidebar = ({ isOpen, mode, targetId, sourceId, persons, families, onSave, 
 function FamilyTreeApp() {
   const [persons, setPersons] = useState<Record<string, Person>>({});
   const [families, setFamilies] = useState<Record<string, Family>>({});
-  const [lang, setLang] = useState<'en' | 'ur'>('ur');
+  const [lang, setLang] = useState<'en' | 'ur'>('en');
   const [isExporting, setIsExporting] = useState(false);
   const { fitView } = useReactFlow();
   const [history, setHistory] = useState<{ persons: Record<string, Person>, families: Record<string, Family> }[]>([]);
